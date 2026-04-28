@@ -1,7 +1,7 @@
 {
   "name": "code-box",
   "displayName": "__MSG_extensionName__",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "__MSG_extensionDescription__",
   "author": "027xiguapi. <458813868@qq.com>",
   "scripts": {
@@ -48,7 +48,7 @@
     "postcss": "^8.2.1",
     "postcss-modules": "^4.3.0",
     "prettier": "3.2.4",
-    "sass": "^1.77.8",
+    "sass": "^1.99.0",
     "sharp": "^0.33.5",
     "typescript": "5.3.3"
   },

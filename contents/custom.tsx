@@ -1,9 +1,5 @@
-import type {
-  PlasmoCSConfig,
-  PlasmoGetShadowHostId,
-  PlasmoGetStyle
-} from "plasmo"
-import { useEffect, useRef, useState } from "react"
+import type { PlasmoGetShadowHostId, } from "plasmo"
+import { useEffect } from "react"
 
 import { sendToBackground } from "@plasmohq/messaging"
 import { useMessage } from "@plasmohq/messaging/hook"

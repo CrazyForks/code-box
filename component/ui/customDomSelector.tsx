@@ -143,6 +143,7 @@ export default function CustomDomSelector() {
   }
 
   const handleConfirm = () => {
+    handleOkModal()
   }
 
   const handleCancel = () => {

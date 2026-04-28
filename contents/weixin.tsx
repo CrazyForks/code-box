@@ -271,59 +271,52 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
   async function downloadMarkdown() {
     const html = document.querySelector("#img-content")
     const markdown = turndownService.turndown(html)
-    await saveMarkdownWithLocalImages(markdown, articleTitle)
+    await saveMarkdown(markdown, articleTitle)
   }
 
   async function downloadMarkdownWithImages(
     onProgress?: (current: number, total: number) => void
   ) {
-    const article = document.querySelector("#js_content")
     const html = document.querySelector("#img-content")
-    if (!article || !html) return
+    if (!html) return
 
-    const images = Array.from(article.getElementsByTagName("img"))
-    const imageUrls = images
-      .map((img) => img.dataset.src || img.src)
-      .filter((url) => url)
-      .map((url) =>
-        url.replace(
-          "//res.wx.qq.com/mmbizwap",
-          "https://res.wx.qq.com/mmbizwap"
-        )
-      )
+    // 先生成 markdown，再从中提取实际图片 URL，确保 URL 完全一致
+    let markdown = turndownService.turndown(html)
+    const mdImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
+    const imageEntries: { alt: string; url: string }[] = []
+    let match
+    while ((match = mdImageRegex.exec(markdown)) !== null) {
+      const url = match[2]
+      if (url && !url.startsWith("./images/")) {
+        imageEntries.push({ alt: match[1], url })
+      }
+    }
 
     const zip = new JSZip()
     const title = articleTitle || document.title.trim()
-    const total = imageUrls.length + 1
+    const total = imageEntries.length + 1
 
-    // 下载所有图片
-    const imageMap = new Map<string, string>()
-    for (let i = 0; i < imageUrls.length; i++) {
+    const getExt = (url: string) => {
+      const fmt = url.match(/wx_fmt=(\w+)/)?.[1] || ""
+      if (fmt === "gif") return ".gif"
+      if (fmt === "png" || fmt === "webp") return ".png"
+      if (fmt === "bmp") return ".bmp"
+      if (url.includes("mmbiz_gif")) return ".gif"
+      if (url.includes("mmbiz_png") || url.includes("mmbiz_webp")) return ".png"
+      return ".jpg"
+    }
+
+    // 下载图片并替换 markdown 中的 URL
+    for (let i = 0; i < imageEntries.length; i++) {
+      const { url } = imageEntries[i]
       try {
-        const response = await fetch(imageUrls[i])
+        const response = await fetch(url)
         const blob = await response.blob()
+        const ext = getExt(url)
+        const localPath = `./images/${i}${ext}`
 
-        let ext = ".jpg"
-        if (
-          imageUrls[i].includes("wx_fmt=gif") ||
-          imageUrls[i].includes("mmbiz_gif")
-        ) {
-          ext = ".gif"
-        } else if (
-          imageUrls[i].includes("wx_fmt=png") ||
-          imageUrls[i].includes("mmbiz_png")
-        ) {
-          ext = ".png"
-        } else if (
-          imageUrls[i].includes("wx_fmt=bmp") ||
-          imageUrls[i].includes("mmbiz_bmp")
-        ) {
-          ext = ".bmp"
-        }
-
-        const filename = `images/${i}${ext}`
-        zip.file(filename, blob)
-        imageMap.set(imageUrls[i], filename)
+        zip.file(`images/${i}${ext}`, blob)
+        markdown = markdown.replace(url, localPath)
 
         if (onProgress) {
           onProgress(i + 1, total)
@@ -332,16 +325,6 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
         console.error(`Failed to download image ${i}:`, error)
       }
     }
-
-    // 生成 markdown 并替换图片路径
-    let markdown = turndownService.turndown(html)
-    imageMap.forEach((localPath, originalUrl) => {
-      const escapedUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      markdown = markdown.replace(
-        new RegExp(`\\(${escapedUrl}\\)`, "g"),
-        `(${localPath})`
-      )
-    })
 
     // 添加 markdown 文件到 zip
     zip.file(`${title}.md`, markdown)
@@ -359,9 +342,10 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
     saveHtml(dom, articleTitle)
   }
 
-  function parseMarkdown() {
-    const dom = document.querySelector("#img-content")
-    setParseContent(dom)
+  async function parseMarkdown() {
+    const html = document.querySelector("#img-content")
+    const markdown = turndownService.turndown(html)
+    await saveMarkdownWithLocalImages(markdown, articleTitle)
   }
 
   function onClose() {
@@ -401,13 +385,13 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
         <a onClick={downloadMarkdown}>下载markdown</a>
       </div>
       <div style={style.item}>
+        <a onClick={parseMarkdown}>下载MD+Base64</a>
+      </div>
+      <div style={style.item}>
         <a onClick={() => downloadMarkdownWithImages()}>打包下载(MD+图片)</a>
       </div>
       <div style={style.item}>
         <a onClick={downloadPdf}>下载PDF</a>
-      </div>
-      <div style={style.item}>
-        <a onClick={parseMarkdown}>解析markdown</a>
       </div>
       <div style={style.item}>
         <a onClick={() => downloadImages()}>下载所有图片</a>
