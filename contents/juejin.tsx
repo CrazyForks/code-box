@@ -77,7 +77,13 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
       editMarkdown()
     }
     if (req.name == "juejin-downloadMarkdown") {
-      downloadMarkdown()
+      if (req.body?.action === "getMarkdown") {
+        const html = document.querySelector("article.article")
+        const markdown = turndownService.turndown(html)
+        res.send({ markdown, title: articleTitle })
+      } else {
+        downloadMarkdown()
+      }
     }
     if (req.name == "juejin-downloadHtml") {
       downloadHtml()

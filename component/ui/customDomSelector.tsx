@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from "react"
 import { useMessage } from "@plasmohq/messaging/hook"
 import { useStorage } from "@plasmohq/storage/dist/hook"
 
-import ValidModal from "~component/ui/validModal"
 import { addCss, saveHtml, saveMarkdown } from "~tools"
 import { useEditMarkdown } from "~utils/editMarkdownHook"
 import { useParseMarkdown } from "~utils/parseMarkdownHook"
@@ -19,7 +18,6 @@ export default function CustomDomSelector() {
   const [position, setPosition] = useState({ top: 0, left: 0 })
   const [isReady, setIsReady] = useState(false)
   const [isSelect, setIsSelect] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const downloadType = useRef("")
   const [editContent, setEditContent] = useEditMarkdown()
   const [parseContent, setParseContent] = useParseMarkdown()
@@ -142,13 +140,9 @@ export default function CustomDomSelector() {
     }
 
     resetState()
-    setTimeout(() => {
-      setIsModalOpen(false)
-    }, 1000)
   }
 
   const handleConfirm = () => {
-    setIsModalOpen(true)
   }
 
   const handleCancel = () => {
@@ -186,10 +180,6 @@ export default function CustomDomSelector() {
     }
   }
 
-  const handleCancelModal = () => {
-    setIsModalOpen(false)
-  }
-
   return (
     <>
       {isSelect && (
@@ -199,13 +189,6 @@ export default function CustomDomSelector() {
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           onNavigate={navigateElement}
-        />
-      )}
-      {isModalOpen && (
-        <ValidModal
-          onClose={handleCancelModal}
-          onConfirm={handleOkModal}
-          type={downloadType.current}
         />
       )}
     </>

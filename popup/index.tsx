@@ -1,4 +1,5 @@
 import Content from "~component/options/content"
+import BatchDownload from "~component/items/batchDownload"
 import { ThemeProvider } from "~theme"
 import { i18n } from "~tools"
 
@@ -32,6 +33,7 @@ export default function IndexPopup() {
           <p className="desc">{i18n("popupDescription")}</p>
         </div>
         <div className="App-body">
+          <BatchDownload />
           <Content />
         </div>
         <div className="App-link">

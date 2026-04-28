@@ -13,7 +13,7 @@ import React, { useEffect, useState, type FC } from "react"
 import { useMessage } from "@plasmohq/messaging/hook"
 import { useStorage } from "@plasmohq/storage/dist/hook"
 
-import { saveHtml, saveMarkdown } from "~tools"
+import { saveHtml, saveMarkdown, saveMarkdownWithLocalImages } from "~tools"
 import useCssCodeHook from "~utils/cssCodeHook"
 import { useEditMarkdown } from "~utils/editMarkdownHook"
 import makerQRPost from "~utils/makerQRPost"
@@ -157,7 +157,16 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
       editMarkdown()
     }
     if (req.name == "weixin-downloadMarkdown") {
-      downloadMarkdown()
+      if (req.body?.action === "getMarkdown") {
+        const html = document.querySelector("#img-content")
+        const markdown = turndownService.turndown(html)
+        res.send({ markdown, title: articleTitle })
+      } else {
+        downloadMarkdown()
+      }
+    }
+    if (req.name == "weixin-downloadMarkdownWithImages") {
+      await downloadMarkdownWithImages(req.body?.onProgress)
     }
     if (req.name == "weixin-downloadHtml") {
       downloadHtml()
@@ -259,10 +268,90 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
     setContent(dom, articleTitle)
   }
 
-  function downloadMarkdown() {
+  async function downloadMarkdown() {
     const html = document.querySelector("#img-content")
     const markdown = turndownService.turndown(html)
-    saveMarkdown(markdown, articleTitle)
+    await saveMarkdownWithLocalImages(markdown, articleTitle)
+  }
+
+  async function downloadMarkdownWithImages(
+    onProgress?: (current: number, total: number) => void
+  ) {
+    const article = document.querySelector("#js_content")
+    const html = document.querySelector("#img-content")
+    if (!article || !html) return
+
+    const images = Array.from(article.getElementsByTagName("img"))
+    const imageUrls = images
+      .map((img) => img.dataset.src || img.src)
+      .filter((url) => url)
+      .map((url) =>
+        url.replace(
+          "//res.wx.qq.com/mmbizwap",
+          "https://res.wx.qq.com/mmbizwap"
+        )
+      )
+
+    const zip = new JSZip()
+    const title = articleTitle || document.title.trim()
+    const total = imageUrls.length + 1
+
+    // 下载所有图片
+    const imageMap = new Map<string, string>()
+    for (let i = 0; i < imageUrls.length; i++) {
+      try {
+        const response = await fetch(imageUrls[i])
+        const blob = await response.blob()
+
+        let ext = ".jpg"
+        if (
+          imageUrls[i].includes("wx_fmt=gif") ||
+          imageUrls[i].includes("mmbiz_gif")
+        ) {
+          ext = ".gif"
+        } else if (
+          imageUrls[i].includes("wx_fmt=png") ||
+          imageUrls[i].includes("mmbiz_png")
+        ) {
+          ext = ".png"
+        } else if (
+          imageUrls[i].includes("wx_fmt=bmp") ||
+          imageUrls[i].includes("mmbiz_bmp")
+        ) {
+          ext = ".bmp"
+        }
+
+        const filename = `images/${i}${ext}`
+        zip.file(filename, blob)
+        imageMap.set(imageUrls[i], filename)
+
+        if (onProgress) {
+          onProgress(i + 1, total)
+        }
+      } catch (error) {
+        console.error(`Failed to download image ${i}:`, error)
+      }
+    }
+
+    // 生成 markdown 并替换图片路径
+    let markdown = turndownService.turndown(html)
+    imageMap.forEach((localPath, originalUrl) => {
+      const escapedUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      markdown = markdown.replace(
+        new RegExp(`\\(${escapedUrl}\\)`, "g"),
+        `(${localPath})`
+      )
+    })
+
+    // 添加 markdown 文件到 zip
+    zip.file(`${title}.md`, markdown)
+
+    if (onProgress) {
+      onProgress(total, total)
+    }
+
+    const content = await zip.generateAsync({ type: "blob" })
+    saveAs(content, `${title}.zip`)
   }
 
   function downloadHtml() {
@@ -310,6 +399,9 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
       </div>
       <div style={style.item}>
         <a onClick={downloadMarkdown}>下载markdown</a>
+      </div>
+      <div style={style.item}>
+        <a onClick={() => downloadMarkdownWithImages()}>打包下载(MD+图片)</a>
       </div>
       <div style={style.item}>
         <a onClick={downloadPdf}>下载PDF</a>
