@@ -268,7 +268,36 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
     setContent(dom, articleTitle)
   }
 
+  async function scrollToLoadImages() {
+    const article = document.querySelector("#js_content")
+    if (!article) return
+
+    // 平滑滚动到底部
+    return new Promise<void>((resolve) => {
+      const scrollHeight = document.documentElement.scrollHeight
+      const clientHeight = document.documentElement.clientHeight
+      const scrollStep = 300 // 每次滚动的距离
+      let currentScroll = 0
+
+      const scrollInterval = setInterval(() => {
+        currentScroll += scrollStep
+        window.scrollTo(0, currentScroll)
+
+        if (currentScroll >= scrollHeight - clientHeight) {
+          clearInterval(scrollInterval)
+          // 等待图片加载
+          setTimeout(() => {
+            window.scrollTo(0, 0) // 滚回顶部
+            resolve()
+          }, 500)
+        }
+      }, 100)
+    })
+  }
+
   async function downloadMarkdown() {
+    await scrollToLoadImages()
+
     const html = document.querySelector("#img-content")
     const markdown = turndownService.turndown(html)
     await saveMarkdown(markdown, articleTitle)
@@ -277,10 +306,11 @@ const PlasmoOverlay: FC<PlasmoCSUIProps> = ({ anchor }) => {
   async function downloadMarkdownWithImages(
     onProgress?: (current: number, total: number) => void
   ) {
+    await scrollToLoadImages()
+
     const html = document.querySelector("#img-content")
     if (!html) return
 
-    // 先生成 markdown，再从中提取实际图片 URL，确保 URL 完全一致
     let markdown = turndownService.turndown(html)
     const mdImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
     const imageEntries: { alt: string; url: string }[] = []

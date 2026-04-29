@@ -62,7 +62,8 @@
     },
     "permissions": [
       "activeTab",
-      "downloads"
+      "downloads",
+      "contextMenus"
     ],
     "host_permissions": [
       "https://*/*"

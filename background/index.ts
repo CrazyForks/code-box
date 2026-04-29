@@ -14,6 +14,11 @@ chrome.runtime.onInstalled.addListener(function (object) {
 
 // 创建右键菜单
 function createContextMenus() {
+  // 先移除所有已存在的菜单项
+  chrome.contextMenus.removeAll(() => {
+
+  })
+  
   // 翻译选中文本
   chrome.contextMenus.create({
     id: "translateText",
@@ -51,72 +56,72 @@ function createContextMenus() {
 }
 
 // 监听右键菜单点击
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab?.id) return
+// chrome.contextMenus.onClicked.addListener((info, tab) => {
+//   if (!tab?.id) return
 
-  switch (info.menuItemId) {
-    case "translateText":
-      chrome.tabs.sendMessage(tab.id, {
-        action: "sendToChat",
-        text: `请将以下文本翻译成中文：\n\n${info.selectionText}`,
-        autoSend: true
-      })
-      break
+//   switch (info.menuItemId) {
+//     case "translateText":
+//       chrome.tabs.sendMessage(tab.id, {
+//         action: "sendToChat",
+//         text: `请将以下文本翻译成中文：\n\n${info.selectionText}`,
+//         autoSend: true
+//       })
+//       break
 
-    case "explainCode":
-      chrome.tabs.sendMessage(tab.id, {
-        action: "sendToChat",
-        text: `请解释以下代码：\n\n\`\`\`\n${info.selectionText}\n\`\`\``,
-        autoSend: true
-      })
-      break
+//     case "explainCode":
+//       chrome.tabs.sendMessage(tab.id, {
+//         action: "sendToChat",
+//         text: `请解释以下代码：\n\n\`\`\`\n${info.selectionText}\n\`\`\``,
+//         autoSend: true
+//       })
+//       break
 
-    case "summarizeText":
-      chrome.tabs.sendMessage(tab.id, {
-        action: "sendToChat",
-        text: `请帮我总结以下内容：\n\n${info.selectionText}`,
-        autoSend: true
-      })
-      break
+//     case "summarizeText":
+//       chrome.tabs.sendMessage(tab.id, {
+//         action: "sendToChat",
+//         text: `请帮我总结以下内容：\n\n${info.selectionText}`,
+//         autoSend: true
+//       })
+//       break
 
-    case "captureAndAnalyze":
-      chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
-        chrome.tabs.sendMessage(tab.id, {
-          action: "sendImageToChat",
-          images: [dataUrl]
-        })
-        setTimeout(() => {
-          chrome.tabs.sendMessage(tab.id, {
-            action: "sendToChat",
-            text: "请分析这张图片的内容",
-            autoSend: false
-          })
-        }, 100)
-      })
-      break
+//     case "captureAndAnalyze":
+//       chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
+//         chrome.tabs.sendMessage(tab.id, {
+//           action: "sendImageToChat",
+//           images: [dataUrl]
+//         })
+//         setTimeout(() => {
+//           chrome.tabs.sendMessage(tab.id, {
+//             action: "sendToChat",
+//             text: "请分析这张图片的内容",
+//             autoSend: false
+//           })
+//         }, 100)
+//       })
+//       break
 
-    case "sendImageToChat":
-      if (info.srcUrl) {
-        // 下载图片并转换为 base64
-        fetch(info.srcUrl)
-          .then((response) => response.blob())
-          .then((blob) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              chrome.tabs.sendMessage(tab.id, {
-                action: "sendImageToChat",
-                images: [reader.result as string]
-              })
-            }
-            reader.readAsDataURL(blob)
-          })
-          .catch((error) => {
-            console.error("Failed to download image:", error)
-          })
-      }
-      break
-  }
-})
+//     case "sendImageToChat":
+//       if (info.srcUrl) {
+//         // 下载图片并转换为 base64
+//         fetch(info.srcUrl)
+//           .then((response) => response.blob())
+//           .then((blob) => {
+//             const reader = new FileReader()
+//             reader.onloadend = () => {
+//               chrome.tabs.sendMessage(tab.id, {
+//                 action: "sendImageToChat",
+//                 images: [reader.result as string]
+//               })
+//             }
+//             reader.readAsDataURL(blob)
+//           })
+//           .catch((error) => {
+//             console.error("Failed to download image:", error)
+//           })
+//       }
+//       break
+//   }
+// })
 
 // 监听来自 content script 的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
